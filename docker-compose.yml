@@ -28,7 +28,7 @@ services:
       - caddy
     command: "server /data"
     labels:
-      caddy: outlinedata.domain.co.uk
+      caddy: ${AWS_S3_UPLOAD_BUCKET_URL}
       caddy.reverse_proxy: "{{upstreams 9000}}"
       caddy.reverse_proxy.1_header_up_0: X-Forwarded-Proto {scheme}
       caddy.reverse_proxy.2_header_up_1: X-Forwarded-Host {host}
@@ -46,7 +46,7 @@ services:
     env_file: ./.env
     restart: unless-stopped
     labels:
-      caddy: outline.domain.co.uk
+      caddy: ${URL}
       caddy.reverse_proxy: "{{upstreams 443}}"
       caddy.reverse_proxy.1_header_up_0: "X-Forwarded-Proto {scheme}"
       caddy.reverse_proxy.2_header_up_1: "X-Forwarded-Host {host}"
