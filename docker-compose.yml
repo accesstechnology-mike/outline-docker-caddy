@@ -1,0 +1,60 @@
+version: "3"
+services:
+  outline_redis:
+    image: redis
+    container_name: outline_redis
+    restart: unless-stopped
+    networks:
+      - outline-internal
+
+  outline_postgres:
+    image: postgres
+    container_name: outline_postgres
+    env_file: ./.env
+    restart: unless-stopped
+    networks:
+      - outline-internal
+    volumes:
+      - ./db:/var/lib/postgresql/data
+
+  outline_minio:
+    image: minio/minio
+    container_name: outline_minio
+    volumes:
+      - ./data:/data
+    env_file: ./.env
+    restart: unless-stopped
+    networks:
+      - caddy
+    command: "server /data"
+    labels:
+      caddy: outlinedata.domain.co.uk
+      caddy.reverse_proxy: "{{upstreams 9000}}"
+      caddy.reverse_proxy.1_header_up_0: X-Forwarded-Proto {scheme}
+      caddy.reverse_proxy.2_header_up_1: X-Forwarded-Host {host}
+
+  outline:
+    image: outlinewiki/outline
+    container_name: outline
+    # set this command instead to initialize/upgrade the db
+    # command: sh -c "sleep 5 && yarn sequelize:migrate --env=production-ssl-disabled"
+    command: yarn start --env=production-ssl-disabled
+    depends_on:
+      - outline_postgres
+      - outline_redis
+      - outline_minio
+    env_file: ./.env
+    restart: unless-stopped
+    labels:
+      caddy: outline.domain.co.uk
+      caddy.reverse_proxy: "{{upstreams 443}}"
+      caddy.reverse_proxy.1_header_up_0: "X-Forwarded-Proto {scheme}"
+      caddy.reverse_proxy.2_header_up_1: "X-Forwarded-Host {host}"
+    networks:
+      - outline-internal
+      - caddy
+
+networks:
+  outline-internal:
+  caddy:
+    external: true
